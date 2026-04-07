@@ -360,18 +360,6 @@ impl FileBrowser {
         }
     }
     
-    fn enter_selected(&mut self) -> Option<PathBuf> {
-        let entry = self.entries.get(self.selected)?;
-        
-        if entry.is_dir {
-            self.current_dir = entry.path.clone();
-            self.refresh();
-            None
-        } else {
-            Some(entry.path.clone())
-        }
-    }
-    
     fn go_up(&mut self) {
         if let Some(parent) = self.current_dir.parent() {
             self.current_dir = parent.to_path_buf();
@@ -1086,7 +1074,7 @@ fn ui_browser(f: &mut Frame, app: &mut App) {
     f.render_widget(playlist_list, chunks[1]);
 
     // Instructions
-    let instructions = Paragraph::new("Enter: Add file/folder | Esc: Back | d: Add directory")
+    let instructions = Paragraph::new("Enter: Navigate dirs / Add file | d: Add dir recursively | h/l or ←/→: Nav | Esc: Back")
         .style(Style::default().fg(Color::DarkGray));
     f.render_widget(
         instructions,
@@ -1312,17 +1300,28 @@ fn handle_browser_mode(app: &mut App, key: crossterm::event::KeyEvent) {
             }
         }
         (_, KeyCode::Enter) => {
-            if let Some(path) = app.browser.enter_selected() {
-                // Add single file
-                app.add_track(path);
-                app.mode = AppMode::Normal;
+            if let Some(entry) = app.browser.entries.get(app.browser.selected) {
+                if entry.is_dir {
+                    // Navigate into directory
+                    let path = entry.path.clone();
+                    app.browser.current_dir = path;
+                    app.browser.refresh();
+                } else {
+                    // Add single file
+                    let path = entry.path.clone();
+                    let name = entry.name.clone();
+                    app.add_track(path);
+                    app.status_msg = Some(format!("Added: {}", name));
+                    app.mode = AppMode::Normal;
+                }
             }
         }
         (_, KeyCode::Char('d')) => {
-            // Add directory
+            // Add directory recursively
             if let Some(entry) = app.browser.entries.get(app.browser.selected) {
                 if entry.is_dir && entry.name != ".." {
-                    app.add_directory(entry.path.clone());
+                    let path = entry.path.clone();
+                    app.add_directory(path);
                     app.mode = AppMode::Normal;
                 }
             }
@@ -1331,7 +1330,14 @@ fn handle_browser_mode(app: &mut App, key: crossterm::event::KeyEvent) {
             app.browser.go_up();
         }
         (_, KeyCode::Char('l')) | (_, KeyCode::Right) => {
-            let _ = app.browser.enter_selected();
+            // Navigate into directory on right/l
+            if let Some(entry) = app.browser.entries.get(app.browser.selected) {
+                if entry.is_dir {
+                    let path = entry.path.clone();
+                    app.browser.current_dir = path;
+                    app.browser.refresh();
+                }
+            }
         }
         _ => {}
     }
