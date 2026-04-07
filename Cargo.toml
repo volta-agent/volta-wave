@@ -1,0 +1,24 @@
+[package]
+name = "volta-wave"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# TUI framework
+ratatui = "0.27"
+
+# Audio playback with position tracking
+kittyaudio = "0.2"
+
+# JSON parsing
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# File handling
+walkdir = "2.5"
+
+# Terminal
+crossterm = "0.27"
+
+# Utils
+rand = "0.8"
