@@ -525,28 +525,29 @@ let is_dir = path.is_dir();
 // ============================================================================
 
 struct App {
-    tracks: Vec<Track>,
-    selected: usize,
-    playing: Option<usize>,
-    mixer: Mixer,
-    sound_handle: Option<kittyaudio::SoundHandle>,
-    spectrum: Vec<f32>,
-    wave_phase: f32,
-    lyrics: Option<SyncedLyrics>,
-    quitting: bool,
-    show_help: bool,
-    sample_rate: u32,
-    viz_mode: VizMode,
-    mode: AppMode,
-    browser: FileBrowser,
-    playlist_menu: PlaylistMenu,
-    playlist_dir: PathBuf,
-    status_msg: Option<String>,
-    volume: f32, // 0.0 to 1.0
-    theme: Theme,
-    shuffle: bool,
-    gapless: bool,
-    played_order: Vec<usize>, // For shuffle mode: tracks played in shuffle order
+ tracks: Vec<Track>,
+ selected: usize,
+ playing: Option<usize>,
+ mixer: Mixer,
+ sound_handle: Option<kittyaudio::SoundHandle>,
+ spectrum: Vec<f32>,
+ wave_phase: f32,
+ lyrics: Option<SyncedLyrics>,
+ quitting: bool,
+ show_help: bool,
+ sample_rate: u32,
+ viz_mode: VizMode,
+ mode: AppMode,
+ browser: FileBrowser,
+ playlist_menu: PlaylistMenu,
+ playlist_dir: PathBuf,
+ status_msg: Option<String>,
+ status_time: Option<Instant>, // When status message was set
+ volume: f32, // 0.0 to 1.0
+ theme: Theme,
+ shuffle: bool,
+ gapless: bool,
+ played_order: Vec<usize>, // For shuffle mode: tracks played in shuffle order
 }
 
 impl App {
@@ -555,42 +556,45 @@ impl App {
         let playlist_dir = PathBuf::from(&home).join(".volta-wave/playlists");
         
  Self {
-        tracks: Vec::new(),
-        selected: 0,
-        playing: None,
-        mixer: Mixer::new(),
-        sound_handle: None,
-        spectrum: vec![0.0; 32],
-        wave_phase: 0.0,
-        lyrics: None,
-        quitting: false,
-        show_help: false,
-        sample_rate: 44100,
-        viz_mode: VizMode::Spectrum,
-        mode: AppMode::Normal,
-        browser: FileBrowser::new(),
-        playlist_menu: PlaylistMenu::new(),
-        playlist_dir,
-        status_msg: None,
-        volume: 0.7, // Default 70%
-        theme: Theme::Gruvbox,
-        shuffle: false,
-        gapless: true, // Default enabled
-        played_order: Vec::new(),
-    }
+ tracks: Vec::new(),
+ selected: 0,
+ playing: None,
+ mixer: Mixer::new(),
+ sound_handle: None,
+ spectrum: vec![0.0; 32],
+ wave_phase: 0.0,
+ lyrics: None,
+ quitting: false,
+ show_help: false,
+ sample_rate: 44100,
+ viz_mode: VizMode::Spectrum,
+ mode: AppMode::Normal,
+ browser: FileBrowser::new(),
+ playlist_menu: PlaylistMenu::new(),
+ playlist_dir,
+ status_msg: None,
+ status_time: None,
+ volume: 0.7, // Default 70%
+ theme: Theme::Gruvbox,
+ shuffle: false,
+ gapless: true, // Default enabled
+ played_order: Vec::new(),
+ }
     }
 
     fn add_track(&mut self, path: PathBuf) {
-        // Check if already in playlist
-        if self.tracks.iter().any(|t| t.path == path) {
-            self.status_msg = Some("Track already in playlist".to_string());
-            return;
-        }
-        
-        let track = Track::from_path(path);
-        self.tracks.push(track);
-        self.tracks.sort_by(|a, b| a.artist.cmp(&b.artist).then(a.title.cmp(&b.title)));
-        self.status_msg = Some("Track added".to_string());
+// Check if already in playlist
+ if self.tracks.iter().any(|t| t.path == path) {
+ self.status_msg = Some("Track already in playlist".to_string());
+ self.status_time = Some(Instant::now());
+ return;
+ }
+ 
+ let track = Track::from_path(path);
+ self.tracks.push(track);
+ self.tracks.sort_by(|a, b| a.artist.cmp(&b.artist).then(a.title.cmp(&b.title)));
+ self.status_msg = Some("Track added".to_string());
+ self.status_time = Some(Instant::now());
     }
 
     fn add_directory(&mut self, dir: PathBuf) {
@@ -607,8 +611,9 @@ impl App {
                 added += 1;
             }
         }
-        self.tracks.sort_by(|a, b| a.artist.cmp(&b.artist).then(a.title.cmp(&b.title)));
-        self.status_msg = Some(format!("Added {} tracks", added));
+self.tracks.sort_by(|a, b| a.artist.cmp(&b.artist).then(a.title.cmp(&b.title)));
+ self.status_msg = Some(format!("Added {} tracks", added));
+ self.status_time = Some(Instant::now());
     }
 
     fn save_playlist(&mut self, name: &str) {
@@ -620,10 +625,16 @@ impl App {
             tracks: self.tracks.iter().map(|t| t.path.to_string_lossy().to_string()).collect(),
         };
         
-        match playlist.save(&path) {
-            Ok(_) => self.status_msg = Some(format!("Saved playlist: {}", name)),
-            Err(e) => self.status_msg = Some(format!("Error saving: {}", e)),
-        }
+match playlist.save(&path) {
+ Ok(_) => {
+ self.status_msg = Some(format!("Saved playlist: {}", name));
+ self.status_time = Some(Instant::now());
+ }
+ Err(e) => {
+ self.status_msg = Some(format!("Error saving: {}", e));
+ self.status_time = Some(Instant::now());
+ }
+ }
     }
 
     fn load_playlist(&mut self, name: &str) {
@@ -642,8 +653,12 @@ impl App {
                 self.playing = None;
                 self.stop();
                 self.status_msg = Some(format!("Loaded playlist: {}", name));
+ self.status_time = Some(Instant::now());
             }
-            Err(e) => self.status_msg = Some(format!("Error loading: {}", e)),
+            Err(e) => {
+ self.status_msg = Some(format!("Error loading: {}", e));
+ self.status_time = Some(Instant::now());
+ }
         }
     }
 
@@ -741,24 +756,27 @@ impl App {
         }
     }
 
-    fn clear_playlist(&mut self) {
-        self.stop();
-        self.tracks.clear();
-        self.selected = 0;
-        self.played_order.clear();
-        self.status_msg = Some("Playlist cleared".to_string());
-    }
+fn clear_playlist(&mut self) {
+ self.stop();
+ self.tracks.clear();
+ self.selected = 0;
+ self.played_order.clear();
+ self.status_msg = Some("Playlist cleared".to_string());
+ self.status_time = Some(Instant::now());
+ }
 
-    fn toggle_shuffle(&mut self) {
-        self.shuffle = !self.shuffle;
-        self.played_order.clear();
-        self.status_msg = Some(format!("Shuffle: {}", if self.shuffle { "ON" } else { "OFF" }));
-    }
+fn toggle_shuffle(&mut self) {
+ self.shuffle = !self.shuffle;
+ self.played_order.clear();
+ self.status_msg = Some(format!("Shuffle: {}", if self.shuffle { "ON" } else { "OFF" }));
+ self.status_time = Some(Instant::now());
+ }
 
-    fn toggle_gapless(&mut self) {
-        self.gapless = !self.gapless;
-        self.status_msg = Some(format!("Gapless: {}", if self.gapless { "ON" } else { "OFF" }));
-    }
+ fn toggle_gapless(&mut self) {
+ self.gapless = !self.gapless;
+ self.status_msg = Some(format!("Gapless: {}", if self.gapless { "ON" } else { "OFF" }));
+ self.status_time = Some(Instant::now());
+ }
 
     fn get_next_track_index(&mut self) -> Option<usize> {
         if self.tracks.is_empty() {
@@ -1513,29 +1531,33 @@ fn handle_normal_mode(app: &mut App, key: crossterm::event::KeyEvent) {
                         app.playing = Some(p - 1);
                     }
                 }
-                app.status_msg = Some("Track removed".to_string());
-            }
+app.status_msg = Some("Track removed".to_string());
+ app.status_time = Some(Instant::now());
+ }
         }
-        // Volume controls
-        (_, KeyCode::Char('=')) | (_, KeyCode::Char('+')) => {
-            app.volume = (app.volume + 0.1).min(1.0);
-            if let Some(handle) = &app.sound_handle {
-                handle.set_volume(app.volume);
-            }
-            app.status_msg = Some(format!("Volume: {}%", (app.volume * 100.0) as u8));
-        }
-        (_, KeyCode::Char('-')) | (_, KeyCode::Char('_')) => {
-            app.volume = (app.volume - 0.1).max(0.0);
-            if let Some(handle) = &app.sound_handle {
-                handle.set_volume(app.volume);
-            }
-            app.status_msg = Some(format!("Volume: {}%", (app.volume * 100.0) as u8));
-        }
-        // Theme toggle
-        (_, KeyCode::Char('t')) => {
-            app.theme = app.theme.next();
-            app.status_msg = Some(format!("Theme: {}", app.theme.name()));
-        }
+// Volume controls
+ (_, KeyCode::Char('=')) | (_, KeyCode::Char('+')) => {
+ app.volume = (app.volume + 0.1).min(1.0);
+ if let Some(handle) = &app.sound_handle {
+ handle.set_volume(app.volume);
+ }
+ app.status_msg = Some(format!("Volume: {}%", (app.volume * 100.0) as u8));
+ app.status_time = Some(Instant::now());
+ }
+ (_, KeyCode::Char('-')) | (_, KeyCode::Char('_')) => {
+ app.volume = (app.volume - 0.1).max(0.0);
+ if let Some(handle) = &app.sound_handle {
+ handle.set_volume(app.volume);
+ }
+ app.status_msg = Some(format!("Volume: {}%", (app.volume * 100.0) as u8));
+ app.status_time = Some(Instant::now());
+ }
+ // Theme toggle
+ (_, KeyCode::Char('t')) => {
+ app.theme = app.theme.next();
+ app.status_msg = Some(format!("Theme: {}", app.theme.name()));
+ app.status_time = Some(Instant::now());
+ }
         // Shuffle toggle
         (_, KeyCode::Char('z')) => {
             app.toggle_shuffle();
@@ -1586,8 +1608,9 @@ fn handle_browser_mode(app: &mut App, key: crossterm::event::KeyEvent) {
                 if !entry.is_dir {
                     let path = entry.path.clone();
                     let name = entry.name.clone();
-                    app.add_track(path);
-                    app.status_msg = Some(format!("Added: {}", name));
+app.add_track(path);
+ app.status_msg = Some(format!("Added: {}", name));
+ app.status_time = Some(Instant::now());
                 }
             }
         }
@@ -1597,9 +1620,10 @@ fn handle_browser_mode(app: &mut App, key: crossterm::event::KeyEvent) {
                 if entry.is_dir && entry.name != ".." {
                     let path = entry.path.clone();
                     let count = app.tracks.len();
-                    app.add_directory(path);
-                    let added = app.tracks.len() - count;
-                    app.status_msg = Some(format!("Added {} tracks", added));
+app.add_directory(path);
+ let added = app.tracks.len() - count;
+ app.status_msg = Some(format!("Added {} tracks", added));
+ app.status_time = Some(Instant::now());
                 }
             }
         }
@@ -1708,10 +1732,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     while !app.quitting {
         terminal.draw(|f| ui(f, &mut app))?;
 
-        // Clear status message after a few seconds
-        if app.status_msg.is_some() {
-            app.status_msg = None;
-        }
+// Clear status message after 3 seconds
+ if let Some(status_time) = app.status_time {
+ if status_time.elapsed().as_secs() >= 3 {
+ app.status_msg = None;
+ app.status_time = None;
+ }
+ }
 
         let timeout = tick_rate.saturating_sub(last_tick.elapsed());
         if crossterm::event::poll(timeout)? {
