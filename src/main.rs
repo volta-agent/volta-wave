@@ -527,6 +527,7 @@ let is_dir = path.is_dir();
 struct App {
  tracks: Vec<Track>,
  selected: usize,
+ scroll_offset: usize, // Track list scroll position
  playing: Option<usize>,
  mixer: Mixer,
  sound_handle: Option<kittyaudio::SoundHandle>,
@@ -558,6 +559,7 @@ impl App {
  Self {
  tracks: Vec::new(),
  selected: 0,
+ scroll_offset: 0,
  playing: None,
  mixer: Mixer::new(),
  sound_handle: None,
@@ -1166,65 +1168,86 @@ fn ui(f: &mut Frame, app: &mut App) {
 }
 
 fn ui_normal(f: &mut Frame, app: &mut App) {
-    let theme = app.theme.colors();
+ let theme = app.theme.colors();
 
-    let chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(35), Constraint::Percentage(65)])
-        .split(f.size());
+ let chunks = Layout::default()
+ .direction(Direction::Horizontal)
+ .constraints([Constraint::Percentage(35), Constraint::Percentage(65)])
+ .split(f.size());
 
-    // Track list
-    let tracks: Vec<ListItem> = app
-        .tracks
-        .iter()
-        .enumerate()
-        .map(|(i, track)| {
-            let style = if Some(i) == app.playing {
-                Style::default()
-                    .fg(theme.playing)
-                    .add_modifier(Modifier::BOLD)
-            } else if i == app.selected {
-                Style::default().fg(theme.accent)
-            } else {
-                Style::default().fg(theme.fg)
-            };
+ // Calculate visible height for track list (minus 2 for borders)
+ let visible_height = chunks[0].height.saturating_sub(2) as usize;
+ 
+ // Adjust scroll_offset to keep selected item visible
+ if visible_height > 0 {
+ if app.selected < app.scroll_offset {
+ app.scroll_offset = app.selected;
+ } else if app.selected >= app.scroll_offset + visible_height {
+ app.scroll_offset = app.selected - visible_height + 1;
+ }
+ // Ensure scroll_offset doesn't go negative or exceed track count
+ app.scroll_offset = app.scroll_offset.min(app.tracks.len().saturating_sub(visible_height));
+ }
 
-            let prefix = if Some(i) == app.playing && app.is_playing() {
-                "▶ "
-            } else if Some(i) == app.playing {
-                "⏸ "
-            } else {
-                "  "
-            };
+ // Track list
+ let tracks: Vec<ListItem> = app
+ .tracks
+ .iter()
+ .enumerate()
+ .map(|(i, track)| {
+ let style = if Some(i) == app.playing {
+ Style::default()
+ .fg(theme.playing)
+ .add_modifier(Modifier::BOLD)
+ } else if i == app.selected {
+ Style::default().fg(theme.accent)
+ } else {
+ Style::default().fg(theme.fg)
+ };
 
-            let has_lyrics = track.lyrics_path.exists()
-                || (Some(i) == app.playing && app.lyrics.is_some());
-            let lyric_marker = if has_lyrics && Some(i) == app.playing {
-                " 🎤"
-            } else {
-                ""
-            };
+ let prefix = if Some(i) == app.playing && app.is_playing() {
+ "▶ "
+ } else if Some(i) == app.playing {
+ "⏸ "
+ } else {
+ " "
+ };
 
-            ListItem::new(format!(
-                "{}{} - {}{}",
-                prefix, track.artist, track.title, lyric_marker
-            ))
-            .style(style)
-        })
-        .collect();
+ let has_lyrics = track.lyrics_path.exists()
+ || (Some(i) == app.playing && app.lyrics.is_some());
+ let lyric_marker = if has_lyrics && Some(i) == app.playing {
+ " 🎤"
+ } else {
+ ""
+ };
 
-    let track_list = List::new(tracks).block(
-        Block::default()
-            .title(" Tracks ")
-            .borders(Borders::ALL)
-            .title_style(
-                Style::default()
-                    .fg(theme.directory)
-                    .add_modifier(Modifier::BOLD),
-            )
-            .border_style(Style::default().fg(theme.dim)),
-    );
-    f.render_widget(track_list, chunks[0]);
+ ListItem::new(format!(
+ "{}{} - {}{}",
+ prefix, track.artist, track.title, lyric_marker
+ ))
+ .style(style)
+ })
+ .collect();
+
+ // Create stateful list with scroll state
+ let mut list_state = ratatui::widgets::ListState::default()
+ .with_offset(app.scroll_offset);
+ list_state.select(Some(app.selected));
+
+ let track_list = List::new(tracks)
+ .block(
+ Block::default()
+ .title(" Tracks ")
+ .borders(Borders::ALL)
+ .title_style(
+ Style::default()
+ .fg(theme.directory)
+ .add_modifier(Modifier::BOLD),
+ )
+ .border_style(Style::default().fg(theme.dim)),
+ )
+ .highlight_symbol("► ");
+ f.render_stateful_widget(track_list, chunks[0], &mut list_state);
 
     // Right side: spectrum + lyrics
     let right_chunks = Layout::default()
@@ -1433,23 +1456,24 @@ fn handle_key_event(app: &mut App, key: crossterm::event::KeyEvent) {
 }
 
 fn handle_normal_mode(app: &mut App, key: crossterm::event::KeyEvent) {
-    use crossterm::event::{KeyCode, KeyModifiers};
+ use crossterm::event::{KeyCode, KeyModifiers};
 
-    match (key.modifiers, key.code) {
-        (KeyModifiers::CONTROL, KeyCode::Char('c')) | (_, KeyCode::Char('q')) => {
-            app.quitting = true
-        }
+ match (key.modifiers, key.code) {
+ (KeyModifiers::CONTROL, KeyCode::Char('c')) | (_, KeyCode::Char('q')) => {
+ app.quitting = true
+ }
 
-        (_, KeyCode::Char('j')) | (_, KeyCode::Down) => {
-            if !app.tracks.is_empty() {
-                app.selected = (app.selected + 1) % app.tracks.len();
-            }
-        }
-        (_, KeyCode::Char('k')) | (_, KeyCode::Up) => {
-            if !app.tracks.is_empty() {
-                app.selected = app.selected.saturating_sub(1);
-            }
-        }
+ (_, KeyCode::Char('j')) | (_, KeyCode::Down) => {
+ if !app.tracks.is_empty() {
+ app.selected = (app.selected + 1) % app.tracks.len();
+ // Scroll offset will be adjusted in render based on visible height
+ }
+ }
+ (_, KeyCode::Char('k')) | (_, KeyCode::Up) => {
+ if !app.tracks.is_empty() {
+ app.selected = app.selected.saturating_sub(1);
+ }
+ }
         (_, KeyCode::Enter) => {
             if !app.tracks.is_empty() {
                 app.play(app.selected);
