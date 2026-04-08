@@ -32,17 +32,10 @@ struct Playlist {
 }
 
 impl Playlist {
-    fn new(name: String) -> Self {
-        Self {
-            name,
-            tracks: Vec::new(),
-        }
-    }
-    
-    fn save(&self, path: &PathBuf) -> std::io::Result<()> {
-        let json = serde_json::to_string_pretty(self)?;
-        fs::write(path, json)
-    }
+ fn save(&self, path: &PathBuf) -> std::io::Result<()> {
+ let json = serde_json::to_string_pretty(self)?;
+ fs::write(path, json)
+ }
     
     fn load(path: &PathBuf) -> std::io::Result<Self> {
         let json = fs::read_to_string(path)?;
@@ -419,6 +412,7 @@ impl Theme {
     }
 }
 
+#[allow(dead_code)]
 struct ThemeColors {
     bg: Color,
     fg: Color,
@@ -839,7 +833,7 @@ fn draw_visualization(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32, m
     f.render_widget(block, area);
 }
 
-fn draw_spectrum_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32, theme: &ThemeColors) {
+fn draw_spectrum_viz(f: &mut Frame, area: Rect, spectrum: &[f32], _phase: f32, theme: &ThemeColors) {
     let bar_width = (area.width.saturating_sub(2)) / spectrum.len() as u16;
     if bar_width == 0 {
         return;
@@ -978,7 +972,7 @@ fn draw_stars_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32, theme
     }
 }
 
-fn draw_mirror_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32, theme: &ThemeColors) {
+fn draw_mirror_viz(f: &mut Frame, area: Rect, spectrum: &[f32], _phase: f32, theme: &ThemeColors) {
     let bar_width = (area.width.saturating_sub(2)) / (spectrum.len() * 2) as u16;
     if bar_width == 0 {
         return;
@@ -1108,33 +1102,6 @@ fn draw_lyrics(f: &mut Frame, area: Rect, lyrics: &Option<SyncedLyrics>, current
                 .add_modifier(Modifier::BOLD),
         );
     f.render_widget(block, area);
-}
-
-fn hsv_to_rgb(h: f32, s: f32, v: f32) -> Color {
-    let h = h % 360.0;
-    let c = v * s;
-    let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
-    let m = v - c;
-
-    let (r, g, b) = if h < 60.0 {
-        (c, x, 0.0)
-    } else if h < 120.0 {
-        (x, c, 0.0)
-    } else if h < 180.0 {
-        (0.0, c, x)
-    } else if h < 240.0 {
-        (0.0, x, c)
-    } else if h < 300.0 {
-        (x, 0.0, c)
-    } else {
-        (c, 0.0, x)
-    };
-
-    Color::Rgb(
-        ((r + m) * 255.0) as u8,
-        ((g + m) * 255.0) as u8,
-        ((b + m) * 255.0) as u8,
-    )
 }
 
 fn ui(f: &mut Frame, app: &mut App) {
