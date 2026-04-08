@@ -100,6 +100,14 @@ fn url_encode(s: &str) -> String {
     encoded
 }
 
+// Check if file extension is a supported audio format
+fn is_audio_file(ext: &str) -> bool {
+    matches!(
+        ext.to_lowercase().as_str(),
+        "mp3" | "flac" | "ogg" | "webm" | "wav" | "m4a" | "aac"
+    )
+}
+
 // ============================================================================
 // SYNCED LYRICS
 // ============================================================================
@@ -485,16 +493,16 @@ impl FileBrowser {
                 continue;
             }
 
-            let is_dir = path.is_dir();
-            let is_mp3 = path.extension()
-                .map(|ext| ext.eq_ignore_ascii_case("mp3"))
-                .unwrap_or(false);
+let is_dir = path.is_dir();
+        let is_audio = path.extension()
+            .map(|ext| is_audio_file(ext.to_string_lossy().as_ref()))
+            .unwrap_or(false);
 
-            if is_dir {
-                dirs.push(BrowserEntry { name, path, is_dir: true });
-            } else if is_mp3 {
-                files.push(BrowserEntry { name, path, is_dir: false });
-            }
+        if is_dir {
+            dirs.push(BrowserEntry { name, path, is_dir: true });
+        } else if is_audio {
+            files.push(BrowserEntry { name, path, is_dir: false });
+        }
         }
 
         // Sort and combine: directories first, then files
@@ -540,8 +548,11 @@ struct App {
     playlist_menu: PlaylistMenu,
     playlist_dir: PathBuf,
     status_msg: Option<String>,
-    volume: f32,      // 0.0 to 1.0
+    volume: f32, // 0.0 to 1.0
     theme: Theme,
+    shuffle: bool,
+    gapless: bool,
+    played_order: Vec<usize>, // For shuffle mode: tracks played in shuffle order
 }
 
 impl App {
@@ -549,27 +560,30 @@ impl App {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
         let playlist_dir = PathBuf::from(&home).join(".volta-wave/playlists");
         
-        Self {
-            tracks: Vec::new(),
-            selected: 0,
-            playing: None,
-            mixer: Mixer::new(),
-            sound_handle: None,
-            spectrum: vec![0.0; 32],
-            wave_phase: 0.0,
-            lyrics: None,
-            quitting: false,
-            show_help: false,
-            sample_rate: 44100,
-            viz_mode: VizMode::Spectrum,
-            mode: AppMode::Normal,
-            browser: FileBrowser::new(),
-            playlist_menu: PlaylistMenu::new(),
-            playlist_dir,
-            status_msg: None,
-            volume: 0.7,  // Default 70%
-            theme: Theme::Gruvbox,
-        }
+ Self {
+        tracks: Vec::new(),
+        selected: 0,
+        playing: None,
+        mixer: Mixer::new(),
+        sound_handle: None,
+        spectrum: vec![0.0; 32],
+        wave_phase: 0.0,
+        lyrics: None,
+        quitting: false,
+        show_help: false,
+        sample_rate: 44100,
+        viz_mode: VizMode::Spectrum,
+        mode: AppMode::Normal,
+        browser: FileBrowser::new(),
+        playlist_menu: PlaylistMenu::new(),
+        playlist_dir,
+        status_msg: None,
+        volume: 0.7, // Default 70%
+        theme: Theme::Gruvbox,
+        shuffle: false,
+        gapless: true, // Default enabled
+        played_order: Vec::new(),
+    }
     }
 
     fn add_track(&mut self, path: PathBuf) {
@@ -591,7 +605,7 @@ impl App {
             .max_depth(3)
             .into_iter()
             .filter_map(|e| e.ok())
-            .filter(|e| e.path().extension().map(|ext| ext.eq_ignore_ascii_case("mp3")).unwrap_or(false))
+            .filter(|e| e.path().extension().map(|ext| is_audio_file(ext.to_string_lossy().as_ref())).unwrap_or(false))
         {
             let path = entry.path().to_path_buf();
             if !self.tracks.iter().any(|t| t.path == path) {
@@ -662,7 +676,7 @@ impl App {
                 .max_depth(2)
                 .into_iter()
                 .filter_map(|e| e.ok())
-                .filter(|e| e.path().extension().map(|ext| ext == "mp3").unwrap_or(false))
+                .filter(|e| e.path().extension().map(|ext| is_audio_file(ext.to_string_lossy().as_ref())).unwrap_or(false))
             {
                 self.tracks.push(Track::from_path(entry.path().to_path_buf()));
             }
@@ -730,6 +744,71 @@ impl App {
             }
         } else {
             0
+        }
+    }
+
+    fn clear_playlist(&mut self) {
+        self.stop();
+        self.tracks.clear();
+        self.selected = 0;
+        self.played_order.clear();
+        self.status_msg = Some("Playlist cleared".to_string());
+    }
+
+    fn toggle_shuffle(&mut self) {
+        self.shuffle = !self.shuffle;
+        self.played_order.clear();
+        self.status_msg = Some(format!("Shuffle: {}", if self.shuffle { "ON" } else { "OFF" }));
+    }
+
+    fn toggle_gapless(&mut self) {
+        self.gapless = !self.gapless;
+        self.status_msg = Some(format!("Gapless: {}", if self.gapless { "ON" } else { "OFF" }));
+    }
+
+    fn get_next_track_index(&mut self) -> Option<usize> {
+        if self.tracks.is_empty() {
+            return None;
+        }
+
+        if self.shuffle {
+            // Get available tracks not yet played
+            let available: Vec<usize> = (0..self.tracks.len())
+                .filter(|&i| !self.played_order.contains(&i))
+                .collect();
+
+            if available.is_empty() {
+                // All tracks played, reset
+                self.played_order.clear();
+                return Some(rand::random::<usize>() % self.tracks.len());
+            }
+
+            // Pick random from available
+            let idx = rand::random::<usize>() % available.len();
+            let next = available[idx];
+            self.played_order.push(next);
+            Some(next)
+        } else {
+            // Sequential playback
+            let current = self.playing.unwrap_or(0);
+            if current + 1 < self.tracks.len() {
+                Some(current + 1)
+            } else {
+                None // End of playlist
+            }
+        }
+    }
+
+    fn is_track_finished(&self) -> bool {
+        self.sound_handle.as_ref().map(|h| h.finished()).unwrap_or(false)
+    }
+
+    fn play_next_if_gapless(&mut self) {
+        if self.gapless && self.is_track_finished() {
+            if let Some(next_idx) = self.get_next_track_index() {
+                self.play(next_idx);
+                self.selected = next_idx;
+            }
         }
     }
 }
@@ -1067,8 +1146,13 @@ fn ui(f: &mut Frame, app: &mut App) {
     
     // Status bar at bottom
     let theme = app.theme.colors();
+    let mode_flags = format!(
+        "{}{}",
+        if app.shuffle { " [SHUF]" } else { "" },
+        if app.gapless { " [GAP]" } else { "" }
+    );
     let status = if let Some(ref msg) = app.status_msg {
-        format!("[Vol: {}%] {}", (app.volume * 100.0) as u8, msg)
+        format!("[Vol: {}%]{} {}", (app.volume * 100.0) as u8, mode_flags, msg)
     } else if let Some(playing_idx) = app.playing {
         let track = &app.tracks[playing_idx];
         let time_s = app.current_time_ms() / 1000;
@@ -1077,11 +1161,11 @@ fn ui(f: &mut Frame, app: &mut App) {
         let lyric_status = if app.lyrics.is_some() { " | Lyrics" } else { "" };
         let vol_status = format!("[Vol: {}%]", (app.volume * 100.0) as u8);
         format!(
-            "{} {} - {} | {:02}:{:02}{}",
-            vol_status, track.artist, track.title, mins, secs, lyric_status
+            "{}{} {} - {} | {:02}:{:02}{}",
+            vol_status, mode_flags, track.artist, track.title, mins, secs, lyric_status
         )
     } else {
-        format!("[Vol: {}%] Press h for help | a to add files | o to open playlist", (app.volume * 100.0) as u8)
+        format!("[Vol: {}%]{} Press h for help | a to add files | o to open playlist", (app.volume * 100.0) as u8, mode_flags)
     };
 
     let status_bar = Paragraph::new(status).style(Style::default().fg(theme.dim));
@@ -1320,6 +1404,9 @@ Space Pause/Resume
 v Cycle visualization
 t Cycle theme
 +/- Volume up/down
+z Shuffle toggle
+g Gapless toggle
+Shift+D Clear playlist
 a Add files (browser)
 o Open playlist menu
 d Delete from playlist
@@ -1387,18 +1474,29 @@ fn handle_normal_mode(app: &mut App, key: crossterm::event::KeyEvent) {
             app.stop();
         }
         (_, KeyCode::Char('n')) => {
-            if let Some(current) = app.playing {
-                let next = (current + 1) % app.tracks.len();
+            if !app.tracks.is_empty() {
+                let next = if app.shuffle {
+                    // Get next in shuffle order
+                    app.get_next_track_index().unwrap_or(0)
+                } else if let Some(current) = app.playing {
+                    (current + 1) % app.tracks.len()
+                } else {
+                    0
+                };
                 app.play(next);
                 app.selected = next;
             }
         }
         (_, KeyCode::Char('p')) => {
-            if let Some(current) = app.playing {
-                let prev = if current == 0 {
-                    app.tracks.len() - 1
+            if !app.tracks.is_empty() {
+                let prev = if let Some(current) = app.playing {
+                    if current == 0 {
+                        app.tracks.len() - 1
+                    } else {
+                        current - 1
+                    }
                 } else {
-                    current - 1
+                    0
                 };
                 app.play(prev);
                 app.selected = prev;
@@ -1470,6 +1568,18 @@ fn handle_normal_mode(app: &mut App, key: crossterm::event::KeyEvent) {
         (_, KeyCode::Char('t')) => {
             app.theme = app.theme.next();
             app.status_msg = Some(format!("Theme: {}", app.theme.name()));
+        }
+        // Shuffle toggle
+        (_, KeyCode::Char('z')) => {
+            app.toggle_shuffle();
+        }
+        // Gapless toggle
+        (_, KeyCode::Char('g')) => {
+            app.toggle_gapless();
+        }
+        // Clear playlist (Shift+D)
+        (KeyModifiers::SHIFT, KeyCode::Char('D')) => {
+            app.clear_playlist();
         }
         _ => {}
     }
@@ -1621,7 +1731,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             LeaveAlternateScreen,
             DisableMouseCapture
         )?;
-        eprintln!("No MP3 files found in ~/Music/");
+        eprintln!("No audio files found in ~/Music/");
         return Ok(());
     }
 
@@ -1645,6 +1755,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         if last_tick.elapsed() >= tick_rate {
             app.wave_phase += 0.1;
+
+            // Check for gapless playback
+            app.play_next_if_gapless();
 
             if app.is_playing() {
                 for (i, val) in app.spectrum.iter_mut().enumerate() {
