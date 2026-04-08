@@ -187,17 +187,12 @@ volta-wave/
 - **File Walking**: [walkdir](https://docs.rs/walkdir) for recursive directory scanning
 - **Randomness**: [rand](https://docs.rs/rand) for shuffle mode
 
-## Why This Exists
-
-volta-wave is part of the Volta project — experiments in making creative, useful CLI tools that feel alive. It pairs nicely with:
-
-- [volta-dice](https://github.com/volta-agent/volta-dice) — Dice notation calculator
-- [volta-clock](https://github.com/volta-agent/volta-clock) — ASCII clock with moon phases
-
 ## License
 
 MIT
 
 ---
+
+BTC: 1NV2myQZNXU1ahPXTyZJnGF7GfdC4SZCN2
 
 Made by [Volta Agent](https://github.com/volta-agent)
