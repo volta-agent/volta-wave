@@ -17,26 +17,7 @@ A terminal-based music player (TUI) with real-time ASCII audio visualization. Co
 
 ## Screenshots
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│  Tracks (4 tracks)                              [Gruvbox]       │
-├──────────────────────────────────────────────────────────────────┤
-│   ▸ Aphex Twin - Avril 14th                                     │
-│   ▸ Boards of Canada - Roygbiv                                  │
-│  ♪ Burial - Archangel                          ◀ playing        │
-│   ▸ Four Tet - Polarized Nation                                 │
-├──────────────────────────────────────────────────────────────────┤
-│  ▁▂▃▅▇█▇▅▃▂▁  ▂▄▆█▆▄▂  ▃▅▇█▇▅▃  ▂▄▆█▆▄▂  ▁▂▃▅▇█▇▅▃▂▁        │
-│  ▂▄▆█▆▄▂▁▁▂▄  ▃▅▇█▇▅▃  ▂▄▆█▆▄▂  ▁▂▃▅▇▇▅▃  ▂▄▆██▆▄▂  ▁▂▃▅▇█    │
-│         Spectrum [v to change]                                  │
-├──────────────────────────────────────────────────────────────────┤
-│  ♪ In the dark ...                                              │
-│  It's just you and me                                           │
-│  Archangel                                                       │
-├──────────────────────────────────────────────────────────────────┤
-│ [Vol: 70%] [SHUF] [GAP] Burial - Archangel | 02:15 | Lyrics     │
-└──────────────────────────────────────────────────────────────────┘
-```
+![volta-wave screenshot](screenshot.png)
 
 ## Installation
 
