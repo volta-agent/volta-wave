@@ -282,6 +282,147 @@ impl VizMode {
 }
 
 // ============================================================================
+// COLOR THEMES (Popular Vim-inspired)
+// ============================================================================
+
+#[derive(Clone, Copy, PartialEq)]
+enum Theme {
+    Gruvbox,      // Warm, retro colors
+    Dracula,      // Dark purple
+    Nord,         // Arctic, bluish
+    TokyoNight,   // Deep blue/purple
+    Catppuccin,   // Pastel warm
+    OneDark,      // Atom-inspired
+    Solarized,    // Classic precision
+    RosePine,     // Soft pink
+}
+
+impl Theme {
+    fn next(self) -> Self {
+        match self {
+            Theme::Gruvbox => Theme::Dracula,
+            Theme::Dracula => Theme::Nord,
+            Theme::Nord => Theme::TokyoNight,
+            Theme::TokyoNight => Theme::Catppuccin,
+            Theme::Catppuccin => Theme::OneDark,
+            Theme::OneDark => Theme::Solarized,
+            Theme::Solarized => Theme::RosePine,
+            Theme::RosePine => Theme::Gruvbox,
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Theme::Gruvbox => "Gruvbox",
+            Theme::Dracula => "Dracula",
+            Theme::Nord => "Nord",
+            Theme::TokyoNight => "Tokyo Night",
+            Theme::Catppuccin => "Catppuccin",
+            Theme::OneDark => "One Dark",
+            Theme::Solarized => "Solarized",
+            Theme::RosePine => "Rosé Pine",
+        }
+    }
+
+    // Returns (background, foreground, accent, secondary, dim, highlight)
+    fn colors(self) -> ThemeColors {
+        match self {
+            Theme::Gruvbox => ThemeColors {
+                bg: Color::Rgb(40, 40, 40),
+                fg: Color::Rgb(235, 219, 178),
+                accent: Color::Rgb(250, 189, 47),    // Yellow
+                secondary: Color::Rgb(152, 151, 26), // Green
+                dim: Color::Rgb(146, 131, 116),
+                highlight: Color::Rgb(251, 73, 52),  // Red
+                directory: Color::Rgb(104, 157, 106), // Aqua
+                playing: Color::Rgb(184, 187, 38),   // Green
+            },
+            Theme::Dracula => ThemeColors {
+                bg: Color::Rgb(40, 42, 54),
+                fg: Color::Rgb(248, 248, 242),
+                accent: Color::Rgb(189, 147, 249),   // Purple
+                secondary: Color::Rgb(139, 233, 253), // Cyan
+                dim: Color::Rgb(98, 114, 164),
+                highlight: Color::Rgb(255, 121, 198), // Pink
+                directory: Color::Rgb(80, 250, 123),  // Green
+                playing: Color::Rgb(255, 184, 108),   // Orange
+            },
+            Theme::Nord => ThemeColors {
+                bg: Color::Rgb(46, 52, 64),
+                fg: Color::Rgb(216, 222, 233),
+                accent: Color::Rgb(136, 192, 208),    // Frost
+                secondary: Color::Rgb(143, 188, 187), // Aqua
+                dim: Color::Rgb(129, 161, 193),
+                highlight: Color::Rgb(191, 97, 106),  // Aurora red
+                directory: Color::Rgb(94, 129, 172),  // Blue
+                playing: Color::Rgb(163, 190, 140),   // Green
+            },
+            Theme::TokyoNight => ThemeColors {
+                bg: Color::Rgb(26, 27, 38),
+                fg: Color::Rgb(192, 202, 245),
+                accent: Color::Rgb(125, 207, 255),    // Blue
+                secondary: Color::Rgb(158, 206, 106), // Green
+                dim: Color::Rgb(89, 99, 134),
+                highlight: Color::Rgb(247, 140, 108), // Orange
+                directory: Color::Rgb(122, 162, 247), // Blue
+                playing: Color::Rgb(77, 166, 170),    // Teal
+            },
+            Theme::Catppuccin => ThemeColors {
+                bg: Color::Rgb(30, 30, 46),
+                fg: Color::Rgb(205, 214, 244),
+                accent: Color::Rgb(203, 166, 247),    // Mauve
+                secondary: Color::Rgb(249, 226, 175), // Yellow
+                dim: Color::Rgb(147, 153, 178),
+                highlight: Color::Rgb(243, 139, 168), // Red
+                directory: Color::Rgb(148, 226, 213), // Teal
+                playing: Color::Rgb(166, 227, 161),   // Green
+            },
+            Theme::OneDark => ThemeColors {
+                bg: Color::Rgb(40, 44, 52),
+                fg: Color::Rgb(171, 178, 191),
+                accent: Color::Rgb(97, 175, 239),     // Blue
+                secondary: Color::Rgb(152, 195, 121), // Green
+                dim: Color::Rgb(92, 99, 112),
+                highlight: Color::Rgb(224, 108, 117), // Red
+                directory: Color::Rgb(229, 192, 123), // Yellow
+                playing: Color::Rgb(152, 195, 121),   // Green
+            },
+            Theme::Solarized => ThemeColors {
+                bg: Color::Rgb(0, 43, 54),
+                fg: Color::Rgb(147, 161, 161),
+                accent: Color::Rgb(42, 161, 152),     // Cyan
+                secondary: Color::Rgb(133, 153, 0),   // Green
+                dim: Color::Rgb(101, 123, 131),
+                highlight: Color::Rgb(220, 50, 47),   // Red
+                directory: Color::Rgb(38, 139, 210),  // Blue
+                playing: Color::Rgb(181, 137, 0),     // Yellow
+            },
+            Theme::RosePine => ThemeColors {
+                bg: Color::Rgb(25, 23, 36),
+                fg: Color::Rgb(224, 222, 244),
+                accent: Color::Rgb(234, 154, 151),    // Rose
+                secondary: Color::Rgb(156, 207, 216), // Foam
+                dim: Color::Rgb(110, 106, 134),
+                highlight: Color::Rgb(235, 111, 146), // Love
+                directory: Color::Rgb(49, 116, 143),  // Pine
+                playing: Color::Rgb(217, 180, 184),   // Iris
+            },
+        }
+    }
+}
+
+struct ThemeColors {
+    bg: Color,
+    fg: Color,
+    accent: Color,
+    secondary: Color,
+    dim: Color,
+    highlight: Color,
+    directory: Color,
+    playing: Color,
+}
+
+// ============================================================================
 // FILE BROWSER
 // ============================================================================
 
@@ -312,7 +453,7 @@ impl FileBrowser {
     
     fn refresh(&mut self) {
         self.entries.clear();
-        
+
         // Parent directory entry
         if self.current_dir.parent().is_some() {
             self.entries.push(BrowserEntry {
@@ -321,39 +462,48 @@ impl FileBrowser {
                 is_dir: true,
             });
         }
-        
+
         // Read directory contents
-        if let Ok(entries) = fs::read_dir(&self.current_dir) {
-            let mut dirs: Vec<BrowserEntry> = Vec::new();
-            let mut files: Vec<BrowserEntry> = Vec::new();
-            
-            for entry in entries.filter_map(|e| e.ok()) {
-                let path = entry.path();
-                let name = path.file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("?")
-                    .to_string();
-                
-                let is_dir = path.is_dir();
-                let is_mp3 = path.extension()
-                    .map(|ext| ext.eq_ignore_ascii_case("mp3"))
-                    .unwrap_or(false);
-                
-                if is_dir {
-                    dirs.push(BrowserEntry { name, path, is_dir: true });
-                } else if is_mp3 {
-                    files.push(BrowserEntry { name, path, is_dir: false });
-                }
+        let Ok(read_dir) = fs::read_dir(&self.current_dir) else {
+            // Can't read directory, just show ".." if available
+            self.selected = 0;
+            return;
+        };
+
+        let mut dirs: Vec<BrowserEntry> = Vec::new();
+        let mut files: Vec<BrowserEntry> = Vec::new();
+
+        for entry in read_dir.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            let name = path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("?")
+                .to_string();
+
+            // Skip hidden files
+            if name.starts_with('.') {
+                continue;
             }
-            
-            // Sort and combine: directories first, then files
-            dirs.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-            files.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-            
-            self.entries.extend(dirs);
-            self.entries.extend(files);
+
+            let is_dir = path.is_dir();
+            let is_mp3 = path.extension()
+                .map(|ext| ext.eq_ignore_ascii_case("mp3"))
+                .unwrap_or(false);
+
+            if is_dir {
+                dirs.push(BrowserEntry { name, path, is_dir: true });
+            } else if is_mp3 {
+                files.push(BrowserEntry { name, path, is_dir: false });
+            }
         }
-        
+
+        // Sort and combine: directories first, then files
+        dirs.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        files.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+
+        self.entries.extend(dirs);
+        self.entries.extend(files);
+
         // Ensure selection is valid
         if self.selected >= self.entries.len() {
             self.selected = 0;
@@ -390,6 +540,8 @@ struct App {
     playlist_menu: PlaylistMenu,
     playlist_dir: PathBuf,
     status_msg: Option<String>,
+    volume: f32,      // 0.0 to 1.0
+    theme: Theme,
 }
 
 impl App {
@@ -415,6 +567,8 @@ impl App {
             playlist_menu: PlaylistMenu::new(),
             playlist_dir,
             status_msg: None,
+            volume: 0.7,  // Default 70%
+            theme: Theme::Gruvbox,
         }
     }
 
@@ -584,28 +738,29 @@ impl App {
 // UI RENDERING
 // ============================================================================
 
-fn draw_visualization(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32, mode: VizMode) {
+fn draw_visualization(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32, mode: VizMode, theme: &ThemeColors) {
     if spectrum.is_empty() || area.width < 2 || area.height < 2 {
         return;
     }
 
     match mode {
-        VizMode::Spectrum => draw_spectrum_viz(f, area, spectrum, phase),
-        VizMode::Wave => draw_wave_viz(f, area, spectrum, phase),
-        VizMode::Circles => draw_circles_viz(f, area, spectrum, phase),
-        VizMode::Stars => draw_stars_viz(f, area, spectrum, phase),
-        VizMode::Mirror => draw_mirror_viz(f, area, spectrum, phase),
+        VizMode::Spectrum => draw_spectrum_viz(f, area, spectrum, phase, theme),
+        VizMode::Wave => draw_wave_viz(f, area, spectrum, phase, theme),
+        VizMode::Circles => draw_circles_viz(f, area, spectrum, phase, theme),
+        VizMode::Stars => draw_stars_viz(f, area, spectrum, phase, theme),
+        VizMode::Mirror => draw_mirror_viz(f, area, spectrum, phase, theme),
     }
 
     let title = format!(" {} [v to change] ", mode.name());
     let block = Block::default()
         .borders(Borders::ALL)
         .title(title.as_str())
-        .title_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD));
+        .title_style(Style::default().fg(theme.accent).add_modifier(Modifier::BOLD))
+        .border_style(Style::default().fg(theme.dim));
     f.render_widget(block, area);
 }
 
-fn draw_spectrum_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
+fn draw_spectrum_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32, theme: &ThemeColors) {
     let bar_width = (area.width.saturating_sub(2)) / spectrum.len() as u16;
     if bar_width == 0 {
         return;
@@ -615,8 +770,9 @@ fn draw_spectrum_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
         let height = ((area.height.saturating_sub(2) as f32) * val).max(1.0) as u16;
         let x = area.x + 1 + i as u16 * bar_width;
 
-        let hue = (i as f32 / spectrum.len() as f32 * 360.0 + phase * 57.0) % 360.0;
-        let color = hsv_to_rgb(hue, 0.8, 0.9);
+        // Gradient from accent to secondary based on height
+        let t = height as f32 / area.height as f32;
+        let color = if t > 0.7 { theme.highlight } else if t > 0.4 { theme.accent } else { theme.secondary };
 
         for y in 0..height {
             let y_pos = area.y + area.height.saturating_sub(2) - y;
@@ -631,7 +787,7 @@ fn draw_spectrum_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
     }
 }
 
-fn draw_wave_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
+fn draw_wave_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32, theme: &ThemeColors) {
     let width = area.width.saturating_sub(2) as usize;
     let height = area.height.saturating_sub(2) as usize;
     let center_y = area.y + 1 + (height / 2) as u16;
@@ -651,17 +807,15 @@ fn draw_wave_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
         let y_pos = (center_y as i16 + y_offset) as u16;
         
         if y_pos > area.y && y_pos < area.y + area.height.saturating_sub(1) {
-            let hue = (x as f32 / width as f32 * 360.0 + phase * 30.0) % 360.0;
-            let color = hsv_to_rgb(hue, 0.8, 0.9);
             f.render_widget(
-                Paragraph::new("●").style(Style::default().fg(color)),
+                Paragraph::new("●").style(Style::default().fg(theme.accent)),
                 Rect::new(x_pos, y_pos, 1, 1),
             );
         }
     }
 }
 
-fn draw_circles_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
+fn draw_circles_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32, theme: &ThemeColors) {
     let center_x = area.x + area.width / 2;
     let center_y = area.y + area.height / 2;
     let max_radius = (area.width.min(area.height) / 2).saturating_sub(2) as f32;
@@ -671,8 +825,7 @@ fn draw_circles_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
         let radius = base_radius + val * max_radius * 0.3;
         let radius = radius.max(1.0) as u16;
         
-        let hue = (i as f32 / spectrum.len() as f32 * 360.0 + phase * 40.0) % 360.0;
-        let color = hsv_to_rgb(hue, 0.7, 0.9);
+        let color = if i % 2 == 0 { theme.accent } else { theme.secondary };
         
         // Draw circle points
         let num_points = (radius as f32 * 6.28 * 2.0) as usize;
@@ -684,8 +837,8 @@ fn draw_circles_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
             let x = (center_x as i16 + dx) as u16;
             let y = (center_y as i16 + dy) as u16;
             
-            if x > area.x && x < area.x + area.width.saturating_sub(1) 
-               && y > area.y && y < area.y + area.height.saturating_sub(1) {
+            if x > area.x && x < area.x + area.width.saturating_sub(1)
+                && y > area.y && y < area.y + area.height.saturating_sub(1) {
                 f.render_widget(
                     Paragraph::new("·").style(Style::default().fg(color)),
                     Rect::new(x, y, 1, 1),
@@ -695,7 +848,7 @@ fn draw_circles_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
     }
 }
 
-fn draw_stars_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
+fn draw_stars_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32, theme: &ThemeColors) {
     use rand::{Rng, SeedableRng};
     
     // Use phase as a seed for deterministic randomness per frame
@@ -712,8 +865,7 @@ fn draw_stars_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
         let brightness = spectrum.iter().sum::<f32>() / spectrum.len() as f32;
         let twinkle = ((phase * 3.0 + x as f32 * 0.1 + y as f32 * 0.1).sin() * 0.5 + 0.5) * brightness;
         
-        let hue = rng.gen_range(0.0..60.0) + 200.0; // Blue-ish
-        let color = hsv_to_rgb(hue, 0.3 + twinkle * 0.5, 0.5 + twinkle * 0.5);
+        let color = if twinkle > 0.6 { theme.highlight } else if twinkle > 0.3 { theme.accent } else { theme.dim };
         
         let chars = ["·", "✦", "✧", "★", "☆"];
         let char_idx = (twinkle * (chars.len() - 1) as f32) as usize;
@@ -736,8 +888,7 @@ fn draw_stars_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
                 let x = start_x + i;
                 let y = start_y + i / 2;
                 if x < area.x + area.width.saturating_sub(1) && y < area.y + area.height.saturating_sub(1) {
-                    let alpha = 1.0 - i as f32 / len as f32;
-                    let color = hsv_to_rgb(45.0, 0.2, alpha);
+                    let color = theme.secondary;
                     f.render_widget(
                         Paragraph::new("-").style(Style::default().fg(color)),
                         Rect::new(x, y, 1, 1),
@@ -748,7 +899,7 @@ fn draw_stars_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
     }
 }
 
-fn draw_mirror_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
+fn draw_mirror_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32, theme: &ThemeColors) {
     let bar_width = (area.width.saturating_sub(2)) / (spectrum.len() * 2) as u16;
     if bar_width == 0 {
         return;
@@ -762,8 +913,7 @@ fn draw_mirror_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
         
         // Right side
         let x_right = center_x + i as u16 * bar_width;
-        let hue = (i as f32 / spectrum.len() as f32 * 180.0 + phase * 57.0) % 360.0;
-        let color = hsv_to_rgb(hue, 0.8, 0.9);
+        let color = if i % 2 == 0 { theme.accent } else { theme.secondary };
         
         for y in 0..height {
             let y_top = center_y.saturating_sub(y);
@@ -806,11 +956,12 @@ fn draw_mirror_viz(f: &mut Frame, area: Rect, spectrum: &[f32], phase: f32) {
     }
 }
 
-fn draw_lyrics(f: &mut Frame, area: Rect, lyrics: &Option<SyncedLyrics>, current_time_ms: u64) {
+fn draw_lyrics(f: &mut Frame, area: Rect, lyrics: &Option<SyncedLyrics>, current_time_ms: u64, theme: &ThemeColors) {
     let height = area.height.saturating_sub(2) as usize;
 
     if height == 0 {
-        let block = Block::default().borders(Borders::ALL).title(" Lyrics ");
+        let block = Block::default().borders(Borders::ALL).title(" Lyrics ")
+            .border_style(Style::default().fg(theme.dim));
         f.render_widget(block, area);
         return;
     }
@@ -835,10 +986,10 @@ fn draw_lyrics(f: &mut Frame, area: Rect, lyrics: &Option<SyncedLyrics>, current
                     let is_current = start + i == current_idx;
                     let style = if is_current {
                         Style::default()
-                            .fg(Color::Yellow)
+                            .fg(theme.accent)
                             .add_modifier(Modifier::BOLD)
                     } else {
-                        Style::default().fg(Color::Gray)
+                        Style::default().fg(theme.dim)
                     };
                     let text = if line.text.is_empty() {
                         "♪".to_string()
@@ -852,7 +1003,7 @@ fn draw_lyrics(f: &mut Frame, area: Rect, lyrics: &Option<SyncedLyrics>, current
         None => {
             vec![Line::styled(
                 "No lyrics available",
-                Style::default().fg(Color::DarkGray),
+                Style::default().fg(theme.dim),
             )]
         }
     };
@@ -874,7 +1025,7 @@ fn draw_lyrics(f: &mut Frame, area: Rect, lyrics: &Option<SyncedLyrics>, current
         .title(" Lyrics ")
         .title_style(
             Style::default()
-                .fg(Color::Magenta)
+                .fg(theme.secondary)
                 .add_modifier(Modifier::BOLD),
         );
     f.render_widget(block, area);
@@ -915,23 +1066,25 @@ fn ui(f: &mut Frame, app: &mut App) {
     }
     
     // Status bar at bottom
+    let theme = app.theme.colors();
     let status = if let Some(ref msg) = app.status_msg {
-        msg.clone()
+        format!("[Vol: {}%] {}", (app.volume * 100.0) as u8, msg)
     } else if let Some(playing_idx) = app.playing {
         let track = &app.tracks[playing_idx];
         let time_s = app.current_time_ms() / 1000;
         let mins = time_s / 60;
         let secs = time_s % 60;
         let lyric_status = if app.lyrics.is_some() { " | Lyrics" } else { "" };
+        let vol_status = format!("[Vol: {}%]", (app.volume * 100.0) as u8);
         format!(
-            "{} - {} | {:02}:{:02}{}",
-            track.artist, track.title, mins, secs, lyric_status
+            "{} {} - {} | {:02}:{:02}{}",
+            vol_status, track.artist, track.title, mins, secs, lyric_status
         )
     } else {
-        "Press h for help | a to add files | o to open playlist | s to save".to_string()
+        format!("[Vol: {}%] Press h for help | a to add files | o to open playlist", (app.volume * 100.0) as u8)
     };
 
-    let status_bar = Paragraph::new(status).style(Style::default().fg(Color::DarkGray));
+    let status_bar = Paragraph::new(status).style(Style::default().fg(theme.dim));
     f.render_widget(
         status_bar,
         Rect::new(0, f.size().height.saturating_sub(1), f.size().width, 1),
@@ -939,11 +1092,13 @@ fn ui(f: &mut Frame, app: &mut App) {
 
     // Help overlay
     if app.show_help {
-        draw_help_overlay(f);
+        draw_help_overlay(f, &app.theme.colors());
     }
 }
 
 fn ui_normal(f: &mut Frame, app: &mut App) {
+    let theme = app.theme.colors();
+
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(35), Constraint::Percentage(65)])
@@ -957,12 +1112,12 @@ fn ui_normal(f: &mut Frame, app: &mut App) {
         .map(|(i, track)| {
             let style = if Some(i) == app.playing {
                 Style::default()
-                    .fg(Color::Green)
+                    .fg(theme.playing)
                     .add_modifier(Modifier::BOLD)
             } else if i == app.selected {
-                Style::default().fg(Color::Yellow)
+                Style::default().fg(theme.accent)
             } else {
-                Style::default().fg(Color::White)
+                Style::default().fg(theme.fg)
             };
 
             let prefix = if Some(i) == app.playing && app.is_playing() {
@@ -970,7 +1125,7 @@ fn ui_normal(f: &mut Frame, app: &mut App) {
             } else if Some(i) == app.playing {
                 "⏸ "
             } else {
-                " "
+                "  "
             };
 
             let has_lyrics = track.lyrics_path.exists()
@@ -995,9 +1150,10 @@ fn ui_normal(f: &mut Frame, app: &mut App) {
             .borders(Borders::ALL)
             .title_style(
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(theme.directory)
                     .add_modifier(Modifier::BOLD),
-            ),
+            )
+            .border_style(Style::default().fg(theme.dim)),
     );
     f.render_widget(track_list, chunks[0]);
 
@@ -1007,16 +1163,19 @@ fn ui_normal(f: &mut Frame, app: &mut App) {
         .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
         .split(chunks[1]);
 
-    draw_visualization(f, right_chunks[0], &app.spectrum, app.wave_phase, app.viz_mode);
+    draw_visualization(f, right_chunks[0], &app.spectrum, app.wave_phase, app.viz_mode, &theme);
     draw_lyrics(
         f,
         right_chunks[1],
         &app.lyrics,
         app.current_time_ms(),
+        &theme,
     );
 }
 
 fn ui_browser(f: &mut Frame, app: &mut App) {
+    let theme = app.theme.colors();
+
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -1030,11 +1189,11 @@ fn ui_browser(f: &mut Frame, app: &mut App) {
         .enumerate()
         .map(|(i, entry)| {
             let style = if i == app.browser.selected {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)
             } else if entry.is_dir {
-                Style::default().fg(Color::Cyan)
+                Style::default().fg(theme.directory)
             } else {
-                Style::default().fg(Color::White)
+                Style::default().fg(theme.fg)
             };
 
             let icon = if entry.is_dir { "📁 " } else { "🎵 " };
@@ -1046,7 +1205,8 @@ fn ui_browser(f: &mut Frame, app: &mut App) {
         Block::default()
             .title(format!(" Browse: {} ", app.browser.current_dir.display()))
             .borders(Borders::ALL)
-            .title_style(Style::default().fg(Color::Cyan)),
+            .title_style(Style::default().fg(theme.directory))
+            .border_style(Style::default().fg(theme.dim)),
     );
     f.render_widget(browser_list, chunks[0]);
 
@@ -1057,9 +1217,9 @@ fn ui_browser(f: &mut Frame, app: &mut App) {
         .enumerate()
         .map(|(i, track)| {
             let style = if Some(i) == app.playing {
-                Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+                Style::default().fg(theme.playing).add_modifier(Modifier::BOLD)
             } else {
-                Style::default().fg(Color::White)
+                Style::default().fg(theme.fg)
             };
             ListItem::new(format!("{} - {}", track.artist, track.title)).style(style)
         })
@@ -1069,20 +1229,26 @@ fn ui_browser(f: &mut Frame, app: &mut App) {
         Block::default()
             .title(format!(" Playlist ({} tracks) ", app.tracks.len()))
             .borders(Borders::ALL)
-            .title_style(Style::default().fg(Color::Magenta)),
+            .title_style(Style::default().fg(theme.secondary))
+            .border_style(Style::default().fg(theme.dim)),
     );
     f.render_widget(playlist_list, chunks[1]);
 
-    // Instructions
-    let instructions = Paragraph::new("Enter: Navigate dirs / Add file | d: Add dir recursively | h/l or ←/→: Nav | Esc: Back")
-        .style(Style::default().fg(Color::DarkGray));
-    f.render_widget(
-        instructions,
-        Rect::new(chunks[0].x, chunks[0].y + chunks[0].height, chunks[0].width, 1),
-    );
+    // Instructions (only if there's room)
+    let instructions_y = chunks[0].y + chunks[0].height;
+    if instructions_y < f.size().height {
+        let instructions = Paragraph::new("Enter/l/→: Nav | a: Add file | d: Add dir | h/←: Up | Esc: Back")
+            .style(Style::default().fg(theme.dim));
+        f.render_widget(
+            instructions,
+            Rect::new(chunks[0].x, instructions_y, chunks[0].width, 1),
+        );
+    }
 }
 
 fn ui_playlist_menu(f: &mut Frame, app: &mut App) {
+    let theme = app.theme.colors();
+
     let area = Rect::new(
         f.size().width / 4,
         f.size().height / 4,
@@ -1103,9 +1269,9 @@ fn ui_playlist_menu(f: &mut Frame, app: &mut App) {
         .enumerate()
         .map(|(i, name)| {
             let style = if i == app.playlist_menu.selected {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)
             } else {
-                Style::default().fg(Color::White)
+                Style::default().fg(theme.fg)
             };
             ListItem::new(name.as_str()).style(style)
         })
@@ -1115,7 +1281,8 @@ fn ui_playlist_menu(f: &mut Frame, app: &mut App) {
         Block::default()
             .title(" Playlists (Enter to load) ")
             .borders(Borders::ALL)
-            .title_style(Style::default().fg(Color::Cyan)),
+            .title_style(Style::default().fg(theme.directory))
+            .border_style(Style::default().fg(theme.dim)),
     );
     f.render_widget(list, chunks[0]);
 
@@ -1136,36 +1303,41 @@ fn ui_playlist_menu(f: &mut Frame, app: &mut App) {
         Block::default()
             .title(input_title)
             .borders(Borders::ALL)
-            .title_style(Style::default().fg(Color::Magenta)),
+            .title_style(Style::default().fg(theme.secondary))
+            .border_style(Style::default().fg(theme.dim)),
     );
     f.render_widget(input, chunks[1]);
 }
 
-fn draw_help_overlay(f: &mut Frame) {
+fn draw_help_overlay(f: &mut Frame, theme: &ThemeColors) {
     let help_text = r#"
-  j/k or ↑/↓   Navigate tracks
-  Enter         Play selected
-  s             Stop
-  n             Next track
-  p             Previous track
-  Space         Pause/Resume
-  v             Cycle visualization
-  a             Add files (browser)
-  o             Open playlist menu
-  d             Delete from playlist
-  h             Toggle this help
-  q             Quit
+j/k or ↑/↓ Navigate tracks
+Enter Play selected
+s Stop
+n Next track
+p Previous track
+Space Pause/Resume
+v Cycle visualization
+t Cycle theme
++/- Volume up/down
+a Add files (browser)
+o Open playlist menu
+d Delete from playlist
+h Toggle this help
+q Quit
 
-  Lyrics auto-fetched from
-  lrclib.net and saved as .lrc
-        "#;
+Lyrics auto-fetched from
+lrclib.net and saved as .lrc
+"#;
 
     let help_popup = Paragraph::new(help_text).block(
         Block::default()
             .title(" Help ")
             .borders(Borders::ALL)
-            .title_style(Style::default().fg(Color::Yellow)),
-);
+            .title_style(Style::default().fg(theme.accent))
+            .border_style(Style::default().fg(theme.dim)),
+    )
+    .style(Style::default().fg(theme.fg));
 
     let area = Rect::new(
         f.size().width / 4,
@@ -1250,6 +1422,7 @@ fn handle_normal_mode(app: &mut App, key: crossterm::event::KeyEvent) {
         (_, KeyCode::Char('a')) => {
             // Open file browser
             app.mode = AppMode::Browser;
+            app.browser.selected = 0;  // Reset selection
             app.browser.refresh();
         }
         (_, KeyCode::Char('o')) => {
@@ -1277,6 +1450,26 @@ fn handle_normal_mode(app: &mut App, key: crossterm::event::KeyEvent) {
                 }
                 app.status_msg = Some("Track removed".to_string());
             }
+        }
+        // Volume controls
+        (_, KeyCode::Char('=')) | (_, KeyCode::Char('+')) => {
+            app.volume = (app.volume + 0.1).min(1.0);
+            if let Some(handle) = &app.sound_handle {
+                handle.set_volume(app.volume);
+            }
+            app.status_msg = Some(format!("Volume: {}%", (app.volume * 100.0) as u8));
+        }
+        (_, KeyCode::Char('-')) | (_, KeyCode::Char('_')) => {
+            app.volume = (app.volume - 0.1).max(0.0);
+            if let Some(handle) = &app.sound_handle {
+                handle.set_volume(app.volume);
+            }
+            app.status_msg = Some(format!("Volume: {}%", (app.volume * 100.0) as u8));
+        }
+        // Theme toggle
+        (_, KeyCode::Char('t')) => {
+            app.theme = app.theme.next();
+            app.status_msg = Some(format!("Theme: {}", app.theme.name()));
         }
         _ => {}
     }
@@ -1306,23 +1499,30 @@ fn handle_browser_mode(app: &mut App, key: crossterm::event::KeyEvent) {
                     let path = entry.path.clone();
                     app.browser.current_dir = path;
                     app.browser.refresh();
-                } else {
-                    // Add single file
+                }
+                // On files, do nothing - use 'a' to add
+            }
+        }
+        (_, KeyCode::Char('a')) => {
+            // Add single file (stay in browser)
+            if let Some(entry) = app.browser.entries.get(app.browser.selected) {
+                if !entry.is_dir {
                     let path = entry.path.clone();
                     let name = entry.name.clone();
                     app.add_track(path);
                     app.status_msg = Some(format!("Added: {}", name));
-                    app.mode = AppMode::Normal;
                 }
             }
         }
         (_, KeyCode::Char('d')) => {
-            // Add directory recursively
+            // Add directory recursively (stay in browser)
             if let Some(entry) = app.browser.entries.get(app.browser.selected) {
                 if entry.is_dir && entry.name != ".." {
                     let path = entry.path.clone();
+                    let count = app.tracks.len();
                     app.add_directory(path);
-                    app.mode = AppMode::Normal;
+                    let added = app.tracks.len() - count;
+                    app.status_msg = Some(format!("Added {} tracks", added));
                 }
             }
         }
@@ -1378,9 +1578,10 @@ fn handle_playlist_menu_mode(app: &mut App, key: crossterm::event::KeyEvent) {
                     app.playlist_menu.input_buffer.clear();
                     app.mode = AppMode::Normal;
                 }
-            } else if !app.playlist_menu.playlists.is_empty() {
-                // Load playlist
-                let name = app.playlist_menu.playlists[app.playlist_menu.selected].clone();
+        } else if !app.playlist_menu.playlists.is_empty() {
+            // Load playlist
+            let idx = app.playlist_menu.selected.min(app.playlist_menu.playlists.len() - 1);
+            let name = app.playlist_menu.playlists[idx].clone();
                 app.load_playlist(&name);
                 app.mode = AppMode::Normal;
             }
