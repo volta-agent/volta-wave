@@ -13,6 +13,7 @@ A terminal-based music player (TUI) with real-time ASCII audio visualization. Co
 - **8 Vim-inspired themes**: Gruvbox, Dracula, Nord, TokyoNight, Catppuccin, OneDark, Solarized, RosePine
 - **Shuffle & Gapless playback**: Randomize track order, seamless track transitions
 - **Playlist management**: Save/load playlists as JSON, file browser for adding tracks
+- **Quick search**: Filter tracks by title or artist with `/`, real-time results
 - **Keyboard-driven**: Full vim-style navigation, no mouse required
 
 ## Screenshots
@@ -65,12 +66,23 @@ VOLTA_MUSIC_DIR=/path/to/music volta-wave
 | `t` | Cycle color theme |
 | `z` | Toggle shuffle |
 | `g` | Toggle gapless playback |
+| `/` | Search tracks |
 | `a` | Open file browser |
 | `o` | Open playlist menu |
 | `d` | Remove selected track |
 | `Shift+D` | Clear entire playlist |
 | `h` | Toggle help overlay |
 | `q` | Quit |
+
+### Search Mode Keys
+
+| Key | Action |
+|-----|--------|
+| `j`/`k` or ↑/↓ | Navigate results |
+| `Enter` | Select track and exit search |
+| `Esc` | Cancel search |
+| `Backspace` | Delete character |
+| `Ctrl+U` | Clear search query |
 
 ### File Browser Keys
 
@@ -158,7 +170,7 @@ volta-wave/
 ├── Cargo.toml
 ├── README.md
 └── src/
-    └── main.rs     # Single-file application (~1800 LOC)
+    └── main.rs # Single-file application (~1960 LOC)
 ```
 
 ## Technical Details
