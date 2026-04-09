@@ -213,9 +213,10 @@ impl Track {
 
 #[derive(Clone, Copy, PartialEq)]
 enum AppMode {
-    Normal,       // Default track list view
-    Browser,      // File browser
-    PlaylistMenu, // Load/save playlist menu
+ Normal, // Default track list view
+ Browser, // File browser
+ PlaylistMenu, // Load/save playlist menu
+ Search, // Search mode
 }
 
 // ============================================================================
@@ -549,6 +550,10 @@ struct App {
  shuffle: bool,
  gapless: bool,
  played_order: Vec<usize>, // For shuffle mode: tracks played in shuffle order
+ // Search state
+ search_query: String,
+ search_selected: usize, // Index in filtered results
+ filtered_indices: Vec<usize>, // Original indices of matching tracks
 }
 
 impl App {
@@ -581,6 +586,10 @@ impl App {
  shuffle: false,
  gapless: true, // Default enabled
  played_order: Vec::new(),
+ // Search state
+ search_query: String::new(),
+ search_selected: 0,
+ filtered_indices: Vec::new(),
  }
     }
 
@@ -1125,11 +1134,12 @@ fn draw_lyrics(f: &mut Frame, area: Rect, lyrics: &Option<SyncedLyrics>, current
 }
 
 fn ui(f: &mut Frame, app: &mut App) {
-    match app.mode {
-        AppMode::Normal => ui_normal(f, app),
-        AppMode::Browser => ui_browser(f, app),
-        AppMode::PlaylistMenu => ui_playlist_menu(f, app),
-    }
+ match app.mode {
+ AppMode::Normal => ui_normal(f, app),
+ AppMode::Browser => ui_browser(f, app),
+ AppMode::PlaylistMenu => ui_playlist_menu(f, app),
+ AppMode::Search => ui_search(f, app),
+ }
     
     // Status bar at bottom
     let theme = app.theme.colors();
@@ -1401,6 +1411,81 @@ fn ui_playlist_menu(f: &mut Frame, app: &mut App) {
     f.render_widget(input, chunks[1]);
 }
 
+fn ui_search(f: &mut Frame, app: &mut App) {
+ let theme = app.theme.colors();
+
+ let chunks = Layout::default()
+ .direction(Direction::Horizontal)
+ .constraints([Constraint::Percentage(35), Constraint::Percentage(65)])
+ .split(f.size());
+
+ // Search results list
+ let results: Vec<ListItem> = app
+ .filtered_indices
+ .iter()
+ .enumerate()
+ .map(|(i, &orig_idx)| {
+ let track = &app.tracks[orig_idx];
+ let style = if Some(orig_idx) == app.playing {
+ Style::default()
+ .fg(theme.playing)
+ .add_modifier(Modifier::BOLD)
+ } else if i == app.search_selected {
+ Style::default().fg(theme.accent)
+ } else {
+ Style::default().fg(theme.fg)
+ };
+
+ let prefix = if Some(orig_idx) == app.playing && app.is_playing() {
+ "▶ "
+ } else if Some(orig_idx) == app.playing {
+ "⏸ "
+ } else {
+ " "
+ };
+
+ ListItem::new(format!("{}{} - {}", prefix, track.artist, track.title)).style(style)
+ })
+ .collect();
+
+ let result_count = app.filtered_indices.len();
+ let title = format!(" Search Results ({}) ", result_count);
+
+ let mut list_state = ratatui::widgets::ListState::default();
+ list_state.select(Some(app.search_selected));
+
+ let results_list = List::new(results)
+ .block(
+ Block::default()
+ .title(title)
+ .borders(Borders::ALL)
+ .title_style(Style::default().fg(theme.directory).add_modifier(Modifier::BOLD))
+ .border_style(Style::default().fg(theme.dim)),
+ )
+ .highlight_symbol("► ");
+ f.render_stateful_widget(results_list, chunks[0], &mut list_state);
+
+ // Search input box on right side
+ let right_chunks = Layout::default()
+ .direction(Direction::Vertical)
+ .constraints([Constraint::Min(3), Constraint::Percentage(100)])
+ .split(chunks[1]);
+
+ let search_input = Paragraph::new(app.search_query.as_str())
+ .block(
+ Block::default()
+ .title(" Search (press Enter to select, Esc to cancel) ")
+ .borders(Borders::ALL)
+ .title_style(Style::default().fg(theme.accent).add_modifier(Modifier::BOLD))
+ .border_style(Style::default().fg(theme.accent)),
+ );
+ f.render_widget(search_input, right_chunks[0]);
+
+ // Show spectrum in background (dimmed)
+ let theme = app.theme.colors();
+ draw_spectrum_viz(f, right_chunks[1], &app.spectrum, app.wave_phase, &theme);
+}
+
 fn draw_help_overlay(f: &mut Frame, theme: &ThemeColors) {
     let help_text = r#"
 j/k or ↑/↓ Navigate tracks
@@ -1414,6 +1499,7 @@ t Cycle theme
 +/- Volume up/down
 z Shuffle toggle
 g Gapless toggle
+/ Search tracks
 Shift+D Clear playlist
 a Add files (browser)
 o Open playlist menu
@@ -1448,11 +1534,12 @@ lrclib.net and saved as .lrc
 // ============================================================================
 
 fn handle_key_event(app: &mut App, key: crossterm::event::KeyEvent) {
-    match app.mode {
-        AppMode::Normal => handle_normal_mode(app, key),
-        AppMode::Browser => handle_browser_mode(app, key),
-        AppMode::PlaylistMenu => handle_playlist_menu_mode(app, key),
-    }
+ match app.mode {
+ AppMode::Normal => handle_normal_mode(app, key),
+ AppMode::Browser => handle_browser_mode(app, key),
+ AppMode::PlaylistMenu => handle_playlist_menu_mode(app, key),
+ AppMode::Search => handle_search_mode(app, key),
+ }
 }
 
 fn handle_normal_mode(app: &mut App, key: crossterm::event::KeyEvent) {
@@ -1590,11 +1677,18 @@ app.status_msg = Some("Track removed".to_string());
         (_, KeyCode::Char('g')) => {
             app.toggle_gapless();
         }
-        // Clear playlist (Shift+D)
-        (KeyModifiers::SHIFT, KeyCode::Char('D')) => {
-            app.clear_playlist();
-        }
-        _ => {}
+// Clear playlist (Shift+D)
+ (KeyModifiers::SHIFT, KeyCode::Char('D')) => {
+ app.clear_playlist();
+ }
+ // Enter search mode
+ (_, KeyCode::Char('/')) => {
+ app.mode = AppMode::Search;
+ app.search_query.clear();
+ app.search_selected = 0;
+ app.filtered_indices.clear();
+ }
+ _ => {}
     }
 }
 
@@ -1721,8 +1815,66 @@ fn handle_playlist_menu_mode(app: &mut App, key: crossterm::event::KeyEvent) {
                 app.playlist_menu.input_buffer.push(c);
             }
         }
-        _ => {}
-    }
+_ => {}
+ }
+}
+
+fn handle_search_mode(app: &mut App, key: crossterm::event::KeyEvent) {
+ use crossterm::event::{KeyCode, KeyModifiers};
+
+ match (key.modifiers, key.code) {
+ // Escape or Enter: exit search mode
+ (_, KeyCode::Esc) | (_, KeyCode::Enter) => {
+ if !app.filtered_indices.is_empty() && app.search_selected < app.filtered_indices.len() {
+ // Jump to selected track
+ app.selected = app.filtered_indices[app.search_selected];
+ }
+ app.mode = AppMode::Normal;
+ app.search_query.clear();
+ app.filtered_indices.clear();
+ }
+ // Navigation in results
+ (_, KeyCode::Char('j')) | (_, KeyCode::Down) => {
+ if !app.filtered_indices.is_empty() {
+ app.search_selected = (app.search_selected + 1) % app.filtered_indices.len();
+ }
+ }
+ (_, KeyCode::Char('k')) | (_, KeyCode::Up) => {
+ if !app.filtered_indices.is_empty() {
+ app.search_selected = app.search_selected.saturating_sub(1);
+ }
+ }
+ // Backspace
+ (_, KeyCode::Backspace) => {
+ app.search_query.pop();
+ update_search_results(app);
+ }
+ // Clear search (Ctrl+U)
+ (KeyModifiers::CONTROL, KeyCode::Char('u')) => {
+ app.search_query.clear();
+ update_search_results(app);
+ }
+ // Type character
+ (_, KeyCode::Char(c)) => {
+ app.search_query.push(c);
+ update_search_results(app);
+ }
+ _ => {}
+ }
+}
+
+fn update_search_results(app: &mut App) {
+ app.filtered_indices.clear();
+ let query = app.search_query.to_lowercase();
+ for (i, track) in app.tracks.iter().enumerate() {
+ if track.title.to_lowercase().contains(&query) || track.artist.to_lowercase().contains(&query) {
+ app.filtered_indices.push(i);
+ }
+ }
+ // Reset selection if current is out of bounds
+ if app.search_selected >= app.filtered_indices.len() && !app.filtered_indices.is_empty() {
+ app.search_selected = 0;
+ }
 }
 
 // ============================================================================
